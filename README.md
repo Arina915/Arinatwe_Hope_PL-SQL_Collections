@@ -44,7 +44,23 @@ This project demonstrates mastery of:
 
 #  Repository Structure
 
-`Hotel_PL_SQL_Project/ │ ├── sql_scripts/                         # Executable SQL & PL/SQL files │   ├── 01_create_tables.sql             # Database schema & sample data │   ├── 02_associative_arrays.sql        # Associative array demo (room rates) │   ├── 03_varray_demo.sql               # VARRAY demo (fixed services list) │   ├── 04_nested_table_demo.sql         # Nested table demo (reservations) │   ├── 05_user_defined_records.sql      # User-defined hotel reservation record │   ├── 06_table_based_records.sql       # %ROWTYPE demonstration │   └── 07_comprehensive_demo.sql        # Full integration of all features │ ├── documentation/ │   └── Hotel_PL_SQL_Complete_Documentation.docx │ └── screenshots/     └── [Outputs from all script demonstrations]`
+```Hotel_PL_SQL_Project/
+│
+├── sql_scripts/                         # Executable SQL & PL/SQL files
+│   ├── 01_create_tables.sql             # Database schema & sample data
+│   ├── 02_associative_arrays.sql        # Associative array demo (room rates)
+│   ├── 03_varray_demo.sql               # VARRAY demo (fixed services list)
+│   ├── 04_nested_table_demo.sql         # Nested table demo (reservations)
+│   ├── 05_user_defined_records.sql      # User-defined hotel reservation record
+│   ├── 06_table_based_records.sql       # %ROWTYPE demonstration
+│   └── 07_comprehensive_demo.sql        # Full integration of all features
+│
+├── documentation/
+│   └── Hotel_PL_SQL_Complete_Documentation.docx
+│
+└── screenshots/
+    └── [Outputs from all script demonstrations]
+```
 
 ---
 
@@ -237,6 +253,130 @@ This project demonstrates mastery of:
     
 
 ---
+# plsql_collections_records_goto_hotel_package.sql
+`-- plsql_types_and_package.sql
+CREATE OR REPLACE PACKAGE hotel_pkg AS
+    -- Record types
+    TYPE t_reservation_rec IS RECORD (
+        reservation_id NUMBER,
+        guest_id NUMBER,
+        room_id NUMBER,
+        checkin_date DATE,
+        checkout_date DATE,
+        total_amount NUMBER,
+        status VARCHAR2(20)
+    );
+
+    -- Collection types (nested table) for bulk operations
+    TYPE t_reservation_table IS TABLE OF t_reservation_rec;
+
+    -- Simple table of numbers (e.g. room ids)
+    TYPE t_num_table IS TABLE OF NUMBER;
+
+    -- Procedures
+    PROCEDURE bulk_create_reservations(p_res_list IN t_reservation_table);
+    PROCEDURE calculate_reservation_total(p_res_id IN NUMBER);
+    PROCEDURE demo_goto_example;
+END hotel_pkg;
+/
+
+CREATE OR REPLACE PACKAGE BODY hotel_pkg AS
+
+    PROCEDURE bulk_create_reservations(p_res_list IN t_reservation_table) IS
+    BEGIN
+        -- Use FORALL with collections for performance
+        FOR i IN 1 .. p_res_list.COUNT LOOP
+            INSERT INTO reservation (
+                reservation_id, 
+                guest_id, 
+                room_id, 
+                check_in_date, 
+                check_out_date, 
+                total_amount, 
+                status
+            ) VALUES (
+                seq_reservation_service.NEXTVAL,  -- Using existing sequence
+                p_res_list(i).guest_id,
+                p_res_list(i).room_id,
+                p_res_list(i).checkin_date,
+                p_res_list(i).checkout_date,
+                NVL(p_res_list(i).total_amount, 0),
+                NVL(p_res_list(i).status, 'CONFIRMED')  -- Changed to match table default
+            );
+        END LOOP;
+        COMMIT;
+    EXCEPTION
+        WHEN OTHERS THEN
+            ROLLBACK;
+            RAISE;  -- Re-raise the exception to notify caller
+    END bulk_create_reservations;
+
+    PROCEDURE calculate_reservation_total(p_res_id IN NUMBER) IS
+        v_room_rate NUMBER;
+        v_nights NUMBER;
+        v_total NUMBER := 0;
+    BEGIN
+        -- Calculate number of nights
+        SELECT (r.check_out_date - r.check_in_date) 
+        INTO v_nights
+        FROM reservation r
+        WHERE r.reservation_id = p_res_id;
+        
+        -- Get room rate
+        SELECT rr.price
+        INTO v_room_rate
+        FROM room_rate rr
+        JOIN reservation r ON rr.room_type = (
+            SELECT room_type FROM room WHERE room_id = r.room_id
+        )
+        WHERE r.reservation_id = p_res_id
+        AND rr.rate_date = TRUNC(SYSDATE);
+        
+        -- Calculate base room cost
+        v_total := v_nights * v_room_rate;
+        
+        -- Add service costs
+        FOR service_rec IN (
+            SELECT rs.quantity * s.price as service_cost
+            FROM reservation_service rs
+            JOIN service s ON rs.service_id = s.service_id
+            WHERE rs.reservation_id = p_res_id
+        ) LOOP
+            v_total := v_total + service_rec.service_cost;
+        END LOOP;
+        
+        -- Update reservation total
+        UPDATE reservation 
+        SET total_amount = v_total
+        WHERE reservation_id = p_res_id;
+        
+        COMMIT;
+        
+    EXCEPTION
+        WHEN NO_DATA_FOUND THEN
+            DBMS_OUTPUT.PUT_LINE('Reservation not found or missing data');
+        WHEN OTHERS THEN
+            ROLLBACK;
+            RAISE;
+    END calculate_reservation_total;
+
+    PROCEDURE demo_goto_example IS
+        v_counter NUMBER := 0;
+    BEGIN
+        <<start_point>>
+        v_counter := v_counter + 1;
+        
+        IF v_counter < 5 THEN
+            DBMS_OUTPUT.PUT_LINE('Counter: ' || v_counter);
+            GOTO start_point;
+        END IF;
+        
+        DBMS_OUTPUT.PUT_LINE('GOTO demo completed');
+    END demo_goto_example;
+
+END hotel_pkg;
+/`
+
 
 #  GOTO Statement Patterns Used
 
@@ -283,9 +423,11 @@ All demonstrations tested under:
 - Error simulation for GOTO testing
     
 
-**Verification Steps:**  
+* Verification Steps: 
 ✔ Execute each script  
 ✔ Compare expected vs actual output  
 ✔ Validate nightly rate calculations  
 ✔ Validate reservation totals  
 ✔ Trace GOTO paths using `DBMS_OUTPUT`
+-------
+Arinatwe Hope_28313
