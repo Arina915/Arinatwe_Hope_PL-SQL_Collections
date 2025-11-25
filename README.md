@@ -5,7 +5,7 @@ This repository demonstrates comprehensive implementation of **PL/SQL Collection
 **Course:** Database Development with PL/SQL (INSY 8311)  
 **Instructor:** Eric Maniraguha  
 **Institution:** Adventist University of Central Africa (AUCA)  
-**Date:** November 2025
+**Date:** 25 November 2025
 
 ---
 
@@ -429,5 +429,13 @@ All demonstrations tested under:
 ✔ Validate nightly rate calculations  
 ✔ Validate reservation totals  
 ✔ Trace GOTO paths using `DBMS_OUTPUT`
--------
+
+Reference:
+Oracle Corporation. (2024). PL/SQL Collections and Records. Oracle Database 21c Documentation.
+https://docs.oracle.com/en/database/oracle/oracle-database/21/lnpls/plsql-collections-and-records.html
+
+Feuerstein, S., & Pellerite, B. (2023). Oracle PL/SQL Programming (7th ed.). O’Reilly Media. (Chapters 9–10, 20)
+
+-----
+
 Arinatwe Hope_28313
